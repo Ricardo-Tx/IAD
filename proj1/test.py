@@ -1,6 +1,11 @@
+# this program is meant to test the commands implementation on `analog_serial_pi`,
+# and show a limited example of serial communication from python
+
 import serial
 import time
 
+
+# find the arduino port (COM# on windows, /dev/tty# on linux)
 port = serial.Serial(port="COM8", baudrate=38400,
     bytesize=serial.EIGHTBITS,
     parity=serial.PARITY_NONE,
@@ -8,7 +13,7 @@ port = serial.Serial(port="COM8", baudrate=38400,
 )
 time.sleep(3)
 
-
+# syntactically valid commands
 valid_commands = [
     "turnOn()",
     "setSpeed(100)",
@@ -32,7 +37,7 @@ valid_commands = [
     "mixedArgs(1234567890,1234567890,1234567890)",  # all arguments can be loooong
 ]
 
-
+# syntactically invalid commands
 invalid_commands = [
     # 🚫 Exceeds 16-char command length
     "thisCommandIsTooLong()",  # 21 characters

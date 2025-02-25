@@ -1,6 +1,14 @@
 #include <EEPROM.h>
 
-#define RUN_ARG(x) if(!strcmp(argv[0],#x) && !found) { x(); found = true; }
+// this macro runs a function func if its name is equal to argv[0]
+#define RUN_ARG(func) if(!strcmp(argv[0],#func) && !found) { func(); found = true; }
+
+// this macro prints an error message stating how many 
+// arguments the function takes
+#define BAD_ARG_COUNT(x)   { Serial.print("ERROR: '");    \
+    Serial.print(__FUNCTION__);                           \
+    Serial.println("' expects " x " arguments");          \
+    return; }
 
 #define PARSE_OK 0
 #define PARSE_ERROR 1
@@ -18,7 +26,7 @@ Settings settings;
 
 // state variables for parsing a command
 int size = 16;    // how many chars in current piece
-int argc = 4;     // how many pieces
+int argc = 4;     // how many pieces (1 command + up to 3 arguments)
 bool closed = false;
 
 // program accepts commands, of at most 15 chars, with at most 3 arguments, 
@@ -95,11 +103,9 @@ int parse_command() {
 // COMMANDS
 
 void add(){
-  // this one adds up to 3 inputs
-  if(argc == 1) {
-    Serial.println("ERROR: 'add' expects 1 or more arguments");
-    return;
-  }
+  // this command adds up to 3 inputs
+  if(argc == 1) BAD_ARG_COUNT("1 or more")
+
   float res = 0.0;
   for(int i = 1; i < argc; i++){
     res += atof(argv[i]);
@@ -108,21 +114,17 @@ void add(){
 }
 
 void mult(){
-  // this one multiplies only 2 inputs
-  if(argc != 3) {
-    Serial.println("ERROR: 'mult' expects 2 parameters");
-    return;
-  }
+  // this command multiplies only 2 inputs
+  if(argc != 3) BAD_ARG_COUNT("2")
+
   float a = atof(argv[1]);
   float b = atof(argv[2]);
   Serial.println(a*b, 6);
 } 
 
 void defget(){
-  if(argc > 2) {
-    Serial.println("ERROR: 'defget' expects 0 or 1 parameters");
-    return;
-  }
+  // this command prints the settings stored in memory
+  if(argc > 2) BAD_ARG_COUNT("0 or 1")
 
   EEPROM.get(0, settings);
   
@@ -143,10 +145,8 @@ void defget(){
 }
 
 void defput(){
-  if(argc != 3) {
-    Serial.println("ERROR: 'defput' expects 2 parameters");
-    return;
-  }
+  // this command writes a setting to memory
+  if(argc != 3) BAD_ARG_COUNT("2")
 
   EEPROM.get(0, settings);
   if(!strcmp(argv[1], "TRUE_VOLTAGE")) {
@@ -163,6 +163,15 @@ void defput(){
     Serial.print(argv[1]);
     Serial.println("' not found");
   }
+}
+
+void analog(){
+  // this command prints a voltage read from a specific analog pin
+  if(argc > 2) BAD_ARG_COUNT("0 or 1")
+
+  EEPROM.get(0, settings);
+  const int pin = A0 + (argc == 2 ? atoi(argv[1]) : 0);
+  Serial.println((analogRead(pin) + 0.5) * settings.trueVoltage / 1024.0, 4);
 }
 
 void help(){
@@ -198,6 +207,7 @@ void loop() {
   RUN_ARG(defget)
   RUN_ARG(defput)
   RUN_ARG(help)
+  RUN_ARG(analog)
 
   if(!found){
     Serial.print("ERROR: command '");

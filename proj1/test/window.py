@@ -1,8 +1,5 @@
 import sys
 import serial
-
-print(serial.__file__)
-
 import time
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
@@ -66,7 +63,6 @@ class DataAcquisitionApp(QWidget):
         self.running = False
 
     def acquire_data(self):
-
         while self.running:
             self.serial_port.write(b'READ\n')  # Envia comando ao Arduino
             time.sleep(0.1)  # Aguarda resposta

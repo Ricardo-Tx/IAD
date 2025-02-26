@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
-const int analogPin = A0; // Pino analógico onde o sensor está ligado
+const int analogPin1 = A0; // Pino analógico onde o primeiro sensor está ligado
+const int analogPin2 = A5; // Pino analógico onde o segundo sensor está ligado
 const String command = "READ"; // Comando esperado
 
 void setup() {
@@ -13,9 +14,18 @@ void loop() {
         receivedCommand.trim(); // Remove espaços extras
 
         if (receivedCommand == command) {
-            int sensorValue = analogRead(analogPin); // Lê o valor analógico
-            float sensorValue_V = sensorValue * 5 / 1024.0;
-            Serial.println(sensorValue_V); // Envia o valor de volta
+            // Lê o valor analógico dos dois pinos
+            int sensorValue1 = analogRead(analogPin1);
+            int sensorValue2 = analogRead(analogPin2);
+
+            // Converte os valores para voltagem
+            float sensorValue1_V = sensorValue1 * (5.0 / 1023.0);
+            float sensorValue2_V = sensorValue2 * (5.0 / 1023.0);
+
+            // Envia os valores de voltagem via serial, separados por uma vírgula
+            Serial.print(sensorValue1_V);
+            Serial.print(",");  // Separate values with a comma
+            Serial.println(sensorValue2_V);
         } else {
             Serial.println("ERRO: Comando inválido!"); // Mensagem de erro
         }

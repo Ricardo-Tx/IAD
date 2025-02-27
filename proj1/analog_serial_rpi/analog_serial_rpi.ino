@@ -14,14 +14,18 @@
 #define PARSE_ERROR 1
 #define PARSE_EMPTY 2
 
+const unsigned long ULONG_MAX = (unsigned long)(-1);
 
 // Measurement settings to persist between power cycles
 struct Settings {
-  float trueVoltage;        // what the reference voltage is (around 5V)
-  unsigned long samples;    // how many analogRead samples to average
-  unsigned long interval;   // how much to wait between readings (in ms)
+  float trueVoltage;            // what the reference voltage is (around 5V)
+  unsigned long samples;        // how many analogRead samples to average
+  unsigned long interval;       // time between prints in broadcast
+  unsigned long channels;       // channels to broadcast
 };
 Settings settings;
+
+unsigned long lastBroadcastMillis = ULONG_MAX;
 
 
 // state variables for parsing a command
@@ -99,6 +103,18 @@ int parse_command() {
   else return PARSE_OK;
 }
 
+// function that returns the voltage at a given analog pin
+float voltage(int pin) {
+  // delay(7) https://www.skillbank.co.uk/arduino/readanalogvolts.ino
+  unsigned long sum = 0;
+  for(int i = 0; i < settings.samples; i++)
+  {
+    sum += analogRead(pin);
+    delay(7);
+  }
+  return (sum+0.5) * settings.trueVoltage / (settings.samples * 1024.0);
+}
+
 
 // COMMANDS
 
@@ -122,6 +138,17 @@ void mult(){
   Serial.println(a*b, 6);
 } 
 
+void err() {
+  if(argc > 1) BAD_ARG_COUNT("no")
+
+  EEPROM.get(0, settings);
+
+  Serial.print("+- ");
+  // error = trueVoltage / (1024.0 *2) / (sqrt(max(samples,4)) / 2)
+  Serial.print(settings.trueVoltage/(1024.0*sqrt(max(settings.samples,4))), 8);
+  Serial.println(" V");
+}
+
 void defget(){
   // this command prints the settings stored in memory
   if(argc > 2) BAD_ARG_COUNT("0 or 1")
@@ -138,9 +165,16 @@ void defget(){
     Serial.println(settings.samples);
   }
   if(argc == 1 || !strcmp(argv[1],"INTERVAL")) {
-    Serial.print("Measure Interval: ");
+    Serial.print("Interval: ");
     Serial.print(settings.interval);
     Serial.println(" ms");
+  }
+  if(argc == 1 || !strcmp(argv[1],"CHANNELS")) {
+    Serial.print("Broadcast Channels: 0b");
+    for(int i = 5; i >= 0; i--){
+      Serial.print(!!(settings.channels & (1 << i)));
+    }
+    Serial.println();
   }
 }
 
@@ -151,34 +185,91 @@ void defput(){
   EEPROM.get(0, settings);
   if(!strcmp(argv[1], "TRUE_VOLTAGE")) {
     settings.trueVoltage = atof(argv[2]);
-    EEPROM.put(0, settings);
   } else if(!strcmp(argv[1], "SAMPLES")) {
     settings.samples = strtoul(argv[2], NULL, 10);
-    EEPROM.put(0, settings);
   } else if(!strcmp(argv[1], "INTERVAL")) {
     settings.interval = strtoul(argv[2], NULL, 10);
-    EEPROM.put(0, settings);
+  } else if(!strcmp(argv[1], "CHANNELS")) {
+    if(argv[2][1] != 'b'){
+      Serial.print("ERROR: incorrectly formatted bitmask");
+      return;
+    }
+    settings.channels = strtoul(argv[2]+2, NULL, 10);
   } else {
     Serial.print("ERROR: 'defput' field '");
     Serial.print(argv[1]);
     Serial.println("' not found");
+    return;
   }
+  EEPROM.put(0, settings);
 }
 
 void analog(){
   // this command prints a voltage read from a specific analog pin
   if(argc > 2) BAD_ARG_COUNT("0 or 1")
 
+  unsigned long currentBitmask = 0;
+
   EEPROM.get(0, settings);
-  const int pin = A0 + (argc == 2 ? atoi(argv[1]) : 0);
-  Serial.println((analogRead(pin) + 0.5) * settings.trueVoltage / 1024.0, 4);
+  if(argc == 2){
+    if(argv[1][0] == '0' && argv[1][1] == 'b'){
+      // multichannel
+      currentBitmask = strtoul(argv[1]+2, NULL, 2);
+    } else {
+      // single channel
+      const int pin = A0 + atoi(argv[1]);
+      Serial.println(voltage(pin), 4);
+    }
+  } else {
+    if(lastBroadcastMillis < ULONG_MAX){
+      // multichannel
+      currentBitmask = settings.channels;
+    } else {
+      Serial.println("ERROR: no bitmask set to print periodically; use 'anstart'");
+    }
+  }
+
+  if(currentBitmask){
+    for(int i = 5; i >= 0; i--){
+      if(currentBitmask & (1 << i)){
+        Serial.print(voltage(A0+i), 4);
+        Serial.print(",");
+      }
+    }
+    Serial.println();
+  }
+}
+
+void bstart() {
+  if(argc > 1) BAD_ARG_COUNT("no")
+
+  lastBroadcastMillis = millis();
+}
+
+void bstop() {
+  if(argc > 1) BAD_ARG_COUNT("no")
+
+  lastBroadcastMillis = ULONG_MAX;
 }
 
 void help(){
   Serial.println("Available commands:");
-  Serial.println("\t- add(a, ...): adds up to 3 numbers.");
-  Serial.println("\t- mult(a, b): multiplies 2 numbers.");
   Serial.println("\t- help(): provides information on all the commands.");
+  Serial.println("\t- add(a, ...): adds from 1 to 3 numbers.");
+  Serial.println("\t- mult(a, b): multiplies 2 numbers.");
+  Serial.println("\t- err(): the error of any reading in V, according to the values of TRUE_VOLTAGE and SAMPLES.");
+  Serial.println("\t- defget(...): prints the setting with the provided name (TRUE_VOLTAGE, SAMPLES, INTERVAL or BROADCAST_CHN).\n\t\t"
+                  "If no name is provided, print all the settings.");
+  Serial.println("\t- defput(name, val): sets the value of the setting with the provided name\n\t\t"
+                  "(TRUE_VOLTAGE, SAMPLES, INTERVAL or BROADCAST_CHN).");
+  Serial.println("\t- analog(...): prints the input channel voltages, the argument can be a single number\n\t\t"
+                  "from 0 to 6 or a bitmask like 0b001011 specifying multiple channels (LSB is A0).\n\t\t"
+                  "If no argument is provided and is broadcasting, immediately print the broadcast bitmask channels.");
+  //Serial.println("\t- bset(bitmask, interval): ssaves the channels specified by the bitmask and,\n\t\t"
+  //                "the interval in ms between prints, for broadcasting with 'bstart'.");
+  //Serial.println("\t- bget(): prints the values previously set in 'bset', and if is currently broadcasting.");
+  Serial.println("\t- bstart(): starts broadcasting with the broadcast parameters in the settings.");
+  Serial.println("\t- bstop(): stops broadcasting.");
 }
 
 
@@ -186,13 +277,21 @@ void help(){
 
 void setup() {
   Serial.begin(38400);
+  Serial.println("INFO: type `help()` in a serial message to get information on all the commands");
+
+  // update settings right away
+  EEPROM.get(0, settings);
 }
 
 void loop() {
-  // normal loop stuff here
-
-  // ...
-
+  // check if supposed to broadcast analog readings periodically
+  if(lastBroadcastMillis < ULONG_MAX){
+    unsigned long currentMillis = millis();
+    if(currentMillis >= lastBroadcastMillis + settings.interval){
+      analog();
+      lastBroadcastMillis = currentMillis;
+    }
+  }
 
   // check if there's a new command to process
   int result = parse_command();
@@ -202,12 +301,15 @@ void loop() {
 
   // process any commands
   bool found = false;
+  RUN_ARG(help)
   RUN_ARG(add)
   RUN_ARG(mult)
+  RUN_ARG(err)
   RUN_ARG(defget)
   RUN_ARG(defput)
-  RUN_ARG(help)
   RUN_ARG(analog)
+  RUN_ARG(bstart)
+  RUN_ARG(bstop)
 
   if(!found){
     Serial.print("ERROR: command '");

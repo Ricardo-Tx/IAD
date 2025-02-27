@@ -50,6 +50,8 @@ class DataAcquisitionApp(QWidget):
         self.timer.timeout.connect(self.acquire_data)  # Função chamada periodicamente
         self.timer.setInterval(100)  # Aquisição a cada 100 ms
 
+        self.first_time  = 0
+
         # Flags de controle
         self.acquisition_running = False  # Controle se a aquisição está rodando
 
@@ -70,6 +72,7 @@ class DataAcquisitionApp(QWidget):
         self.y_data2.clear()
         self.line1.clear()
         self.line2.clear()
+        self.first_time = 0
         self.app.processEvents()  # Atualizar a interface gráfica
 
     def start_acquisition(self):
@@ -83,6 +86,7 @@ class DataAcquisitionApp(QWidget):
 
     def stop_acquisition(self):
         self.running = False
+        self.first_time = self.x_data[-1]
         self.acquisition_running = False  # Indica que a aquisição foi parada
         self.timer.stop()  # Parar o temporizador de coleta de dados
 
@@ -105,16 +109,16 @@ class DataAcquisitionApp(QWidget):
                         return  # Ignorar se algum valor for inválido
 
                     # Atualizar os dados para o gráfico
-                    self.x_data.append(time.time() - self.start_time)  # Tempo desde o início
+                    self.x_data.append(time.time() - self.start_time + self.first_time)  # Tempo desde o início
                     self.y_data1.append(value1)  # Valor do primeiro sensor
                     self.y_data2.append(value2)  # Valor do segundo sensor
-
+                    """
                     # Limitar o número de pontos no gráfico (máximo de 100)
                     if len(self.x_data) > 100:
                         self.x_data.pop(0)
                         self.y_data1.pop(0)
                         self.y_data2.pop(0)
-
+                    """
                     # Atualizar as linhas no gráfico
                     self.line1.setData(self.x_data, self.y_data1)  # Atualizar linha do sensor 1
                     self.line2.setData(self.x_data, self.y_data2)  # Atualizar linha do sensor 2

@@ -111,18 +111,21 @@ class DataAcquisitionApp(QWidget):
                 for i in range(len(values)):
                     values[i] = float(values[i])
 
-                # Atualizar os dados para o gráfico
-                self.x_data.append(time.time() - self.start_time + self.first_time)  # Tempo desde o início
-                self.y_data1.append(values[0])  # Valor do primeiro sensor
-                self.y_data2.append(values[1])  # Valor do segundo sensor
-
-                print(self.x_data)
-                print(self.y_data1)
-                print(self.y_data2)
-                # Atualizar as linhas no gráfico
-                self.line1.setData(self.x_data, self.y_data1)  # Atualizar linha do sensor 1
-                self.line2.setData(self.x_data, self.y_data2)  # Atualizar linha do sensor 2
-                self.app.processEvents()  # Atualizar a interface gráfica
+                    # Atualizar os dados para o gráfico
+                    self.x_data.append(time.time() - self.start_time + self.first_time)  # Tempo desde o início
+                    self.y_data1.append(value1)  # Valor do primeiro sensor
+                    self.y_data2.append(value2)  # Valor do segundo sensor
+                    """
+                    # Limitar o número de pontos no gráfico (máximo de 100)
+                    if len(self.x_data) > 100:
+                        self.x_data.pop(0)
+                        self.y_data1.pop(0)
+                        self.y_data2.pop(0)
+                    """
+                    # Atualizar as linhas no gráfico
+                    self.line1.setData(self.x_data, self.y_data1)  # Atualizar linha do sensor 1
+                    self.line2.setData(self.x_data, self.y_data2)  # Atualizar linha do sensor 2
+                    self.app.processEvents()  # Atualizar a interface gráfica
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

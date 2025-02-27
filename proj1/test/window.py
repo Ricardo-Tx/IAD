@@ -50,6 +50,8 @@ class DataAcquisitionApp(QWidget):
         self.timer.timeout.connect(self.acquire_data)  # Função chamada periodicamente
         self.timer.setInterval(100)  # Aquisição a cada 100 ms
 
+        self.first_time  = 0
+
         # Flags de controle
         self.acquisition_running = False  # Controle se a aquisição está rodando
 
@@ -70,6 +72,7 @@ class DataAcquisitionApp(QWidget):
         self.y_data2.clear()
         self.line1.clear()
         self.line2.clear()
+        self.first_time = 0
         self.app.processEvents()  # Atualizar a interface gráfica
 
     def start_acquisition(self):
@@ -83,42 +86,43 @@ class DataAcquisitionApp(QWidget):
 
     def stop_acquisition(self):
         self.running = False
+        self.first_time = self.x_data[-1]
         self.acquisition_running = False  # Indica que a aquisição foi parada
         self.timer.stop()  # Parar o temporizador de coleta de dados
 
     def acquire_data(self):
         # Se a aquisição estiver rodando, solicite os dados do Arduino
         if self.running:
-            self.serial_port.write(b'READ\n')  # Enviar comando para o Arduino
+            self.serial_port.write(b'analog(0b100001)\n')  # Enviar comando para o Arduino
             time.sleep(0.1)  # Aguardar uma pequena quantidade de tempo para a resposta
 
             # Verificar se há dados disponíveis na porta serial
             if self.serial_port.in_waiting > 0:
+                time.sleep(1)  # Aguardar uma pequena quantidade de tempo para a resposta
                 data = self.serial_port.readline().decode().strip()  # Ler a resposta
+                print(data)
+                if data.startswith('INFO'):
+                    return
                 values = data.split(',')  # Separar os valores por vírgula
 
-                if len(values) == 2:
-                    try:
-                        value1 = float(values[0])  # Valor do primeiro sensor
-                        value2 = float(values[1])  # Valor do segundo sensor
-                    except ValueError:
-                        return  # Ignorar se algum valor for inválido
+                values = values[:-1]
+                print(values)
 
-                    # Atualizar os dados para o gráfico
-                    self.x_data.append(time.time() - self.start_time)  # Tempo desde o início
-                    self.y_data1.append(value1)  # Valor do primeiro sensor
-                    self.y_data2.append(value2)  # Valor do segundo sensor
+                for i in range(len(values)):
+                    values[i] = float(values[i])
 
-                    # Limitar o número de pontos no gráfico (máximo de 100)
-                    if len(self.x_data) > 100:
-                        self.x_data.pop(0)
-                        self.y_data1.pop(0)
-                        self.y_data2.pop(0)
+                # Atualizar os dados para o gráfico
+                self.x_data.append(time.time() - self.start_time + self.first_time)  # Tempo desde o início
+                self.y_data1.append(values[0])  # Valor do primeiro sensor
+                self.y_data2.append(values[1])  # Valor do segundo sensor
 
-                    # Atualizar as linhas no gráfico
-                    self.line1.setData(self.x_data, self.y_data1)  # Atualizar linha do sensor 1
-                    self.line2.setData(self.x_data, self.y_data2)  # Atualizar linha do sensor 2
-                    self.app.processEvents()  # Atualizar a interface gráfica
+                print(self.x_data)
+                print(self.y_data1)
+                print(self.y_data2)
+                # Atualizar as linhas no gráfico
+                self.line1.setData(self.x_data, self.y_data1)  # Atualizar linha do sensor 1
+                self.line2.setData(self.x_data, self.y_data2)  # Atualizar linha do sensor 2
+                self.app.processEvents()  # Atualizar a interface gráfica
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

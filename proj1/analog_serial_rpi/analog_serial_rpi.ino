@@ -156,21 +156,21 @@ void defget(){
   EEPROM.get(0, settings);
   
   if(argc == 1 || !strcmp(argv[1],"TRUE_VOLTAGE")) {
-    Serial.print("True Voltage: ");
+    Serial.print("TRUE_VOLTAGE: ");
     Serial.print(settings.trueVoltage);
     Serial.println(" V");
   }
   if(argc == 1 || !strcmp(argv[1],"SAMPLES")) {
-    Serial.print("Samples: ");
+    Serial.print("SAMPLES: ");
     Serial.println(settings.samples);
   }
   if(argc == 1 || !strcmp(argv[1],"INTERVAL")) {
-    Serial.print("Interval: ");
+    Serial.print("INTERVAL: ");
     Serial.print(settings.interval);
     Serial.println(" ms");
   }
   if(argc == 1 || !strcmp(argv[1],"CHANNELS")) {
-    Serial.print("Broadcast Channels: 0b");
+    Serial.print("CHANNELS: 0b");
     for(int i = 5; i >= 0; i--){
       Serial.print(!!(settings.channels & (1 << i)));
     }
@@ -202,6 +202,7 @@ void defput(){
     return;
   }
   EEPROM.put(0, settings);
+  Serial.println("OK");
 }
 
 void analog(){
@@ -244,32 +245,39 @@ void bstart() {
   if(argc > 1) BAD_ARG_COUNT("no")
 
   lastBroadcastMillis = millis();
+  Serial.println("OK");
 }
 
 void bstop() {
   if(argc > 1) BAD_ARG_COUNT("no")
 
   lastBroadcastMillis = ULONG_MAX;
+  Serial.println("OK");
 }
 
 void help(){
-  Serial.println("Available commands:");
-  Serial.println("\t- help(): provides information on all the commands.");
-  Serial.println("\t- add(a, ...): adds from 1 to 3 numbers.");
-  Serial.println("\t- mult(a, b): multiplies 2 numbers.");
-  Serial.println("\t- err(): the error of any reading in V, according to the values of TRUE_VOLTAGE and SAMPLES.");
-  Serial.println("\t- defget(...): prints the setting with the provided name (TRUE_VOLTAGE, SAMPLES, INTERVAL or BROADCAST_CHN).\n\t\t"
-                  "If no name is provided, print all the settings.");
-  Serial.println("\t- defput(name, val): sets the value of the setting with the provided name\n\t\t"
-                  "(TRUE_VOLTAGE, SAMPLES, INTERVAL or BROADCAST_CHN).");
-  Serial.println("\t- analog(...): prints the input channel voltages, the argument can be a single number\n\t\t"
+  Serial.println(F("Available commands:"));
+  Serial.println(F("\t- help(): provides information on all the commands."));
+  Serial.println(F("\t- add(a, ...): adds from 1 to 3 numbers."));
+  Serial.println(F("\t- mult(a, b): multiplies 2 numbers."));
+  Serial.println(F("\t- err(): the error of any reading in V, according to the values of TRUE_VOLTAGE and SAMPLES."));
+  Serial.println(F("\t- defget(...): prints the setting with the provided name (TRUE_VOLTAGE, SAMPLES, INTERVAL or BROADCAST_CHN).\n\t\t"
+                  "If no name is provided, print all the settings."));
+  Serial.println(F("\t- defput(name, val): sets the value of the setting with the provided name\n\t\t"
+                  "(TRUE_VOLTAGE, SAMPLES, INTERVAL or BROADCAST_CHN)."));
+  Serial.println(F("\t- analog(...): prints the input channel voltages, the argument can be a single number\n\t\t"
                   "from 0 to 6 or a bitmask like 0b001011 specifying multiple channels (LSB is A0).\n\t\t"
-                  "If no argument is provided and is broadcasting, immediately print the broadcast bitmask channels.");
+                  "If no argument is provided and is broadcasting, immediately print the broadcast bitmask channels."));
   //Serial.println("\t- bset(bitmask, interval): ssaves the channels specified by the bitmask and,\n\t\t"
   //                "the interval in ms between prints, for broadcasting with 'bstart'.");
   //Serial.println("\t- bget(): prints the values previously set in 'bset', and if is currently broadcasting.");
-  Serial.println("\t- bstart(): starts broadcasting with the broadcast parameters in the settings.");
-  Serial.println("\t- bstop(): stops broadcasting.");
+  Serial.println(F("\t- bstart(): starts broadcasting with the broadcast parameters in the settings."));
+  Serial.println(F("\t- bstop(): stops broadcasting."));
+  Serial.println(F("Available settings:"));
+  Serial.println(F("\t- TRUE_VOLTAGE: the real voltage measured at the Arduino 5V pin."));
+  Serial.println(F("\t- SAMPLES: number of samples to take average of, to reduce noise."));
+  Serial.println(F("\t- INTERVAL: time in ms to wait between reading broadcasts."));
+  Serial.println(F("\t- CHANNELS: bitmask like 0b001011 specifying multiple analog ports to read when broadcasting"));
 }
 
 

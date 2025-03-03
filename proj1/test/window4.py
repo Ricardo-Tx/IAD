@@ -89,6 +89,9 @@ class AcquisitionApp(QWidget):
     # which analog channel checkboxes should be checked on startup
     checkboxes_default = [True, True, True, True, True, True]
 
+    # whether the program should expect a start message from the arduino
+    start_msg = True
+
     # QMessageBox icons associated to each possible arduino status message 
     statuses = {
         "ERROR": QMessageBox.Critical,
@@ -275,7 +278,8 @@ class AcquisitionApp(QWidget):
             return SerialState.ERROR
         
         # read welcome message
-        self.message(force=True)
+        if AcquisitionApp.start_msg:
+            self.message(force=True)
         
         # refer to the state transitions
         if self.state == AcquisitionState.HALTED:
@@ -384,6 +388,7 @@ class AcquisitionApp(QWidget):
                 command += "1"
             else:
                 command += "0"
+        command = command[::-1]
 
         try:
             # send the command

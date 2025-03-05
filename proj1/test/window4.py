@@ -324,7 +324,7 @@ class AcquisitionApp(QWidget):
 
         # send given command
         self.serial.write(text.encode("ascii"))
-        time.sleep(0.5)
+        time.sleep(2 if force else 0.5)
 
         lines = []
         while self.serial.in_waiting > 0:

@@ -111,7 +111,6 @@ class AcquisitionApp(QWidget):
         # horizontal layout with serial information
         self.serial_widget = QWidget()
         self.serial_widget.setObjectName("serial_widget")
-        self.serial_widget.setStyleSheet("QWidget#serial_widget { background-color: lightgray; }")
         self.serial_layout = QHBoxLayout()
         self.serial_layout.addWidget(QLabel("Serial Port:"))
         self.ports_combobox = QComboBox()
@@ -124,7 +123,7 @@ class AcquisitionApp(QWidget):
         self.layout.addWidget(self.serial_widget)
 
         # spacer between horizontal layout and the rest of the window
-        self.layout.addItem(QSpacerItem(100,50,QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.layout.addItem(QSpacerItem(100,50,QSizePolicy.Expanding,QSizePolicy.Minimum))
 
         # horizontal layout for the analog channel checkboxes
         self.button_layout = QHBoxLayout()
@@ -147,7 +146,7 @@ class AcquisitionApp(QWidget):
             self.layout.addWidget(btn)
             setattr(self, command+"_button", btn)
 
-        # main graph
+        # main graph, with zooming/panning disabled
         self.graph = pg.PlotWidget()
         self.graph.getPlotItem().hideButtons()
         self.graph.getPlotItem().getViewBox().setMouseEnabled(x=False, y=False)
@@ -221,7 +220,7 @@ class AcquisitionApp(QWidget):
 
 
     def on_port_select(self, i: int):
-        # called when the user selects a combobox item
+        '''called when the user selects a combobox item'''
         new_port = self.ports_combobox.itemText(i).split(": ")[0]
         if new_port == self.serial.port:
             return
@@ -238,6 +237,10 @@ class AcquisitionApp(QWidget):
 
 
     def check_connection(self, force=False):
+        '''
+        handles the serial port connection (possible disconnections or device changes).
+        does nothing if the serial port list stays the same, unless if forced.
+        '''
         ports = serial.tools.list_ports.comports()
         if self.ports_list == ports and not force:
             # nothing new
@@ -299,6 +302,7 @@ class AcquisitionApp(QWidget):
 
 
     def get_true_voltage(self):
+        '''scales the y axis according to the maximum voltage reported by the arduino'''
         if not self.serial.is_open:
             # can't send the command
             return
@@ -315,6 +319,10 @@ class AcquisitionApp(QWidget):
 
 
     def message(self, force=False):
+        '''
+        sends the text of the command text field as a command to the arduino.
+        sends nothing if there's no text on the text field, unless if forced.
+        '''
         text = self.line_edit.text()
         if not text and not force:
             # nothing to send
@@ -332,7 +340,7 @@ class AcquisitionApp(QWidget):
             data = self.serial.readline().decode().rstrip()
             lines.append(data)
 
-        # open a popup window (non blocking)
+        # open a popup window
         msg = QMessageBox()
         status = next((k for k in AcquisitionApp.statuses if lines[0].startswith(k+": ")), None)
         if len(lines) == 1 and status != None:
@@ -344,11 +352,11 @@ class AcquisitionApp(QWidget):
             # write the original command in bold and the response below
             msg.setWindowTitle("RESULT")
             msg.setText("<b>"+text+"</b><br><br>"+'<br>'.join([l.replace('\t','&nbsp;'*4) for l in lines]))
-        # msg.open()
         msg.exec_()
 
 
     def on_clear_acquisition(self):
+        '''clears the acquisition data'''
         # clear everything and update x range
         for chn in self.channels:
             chn.clear()
@@ -358,7 +366,9 @@ class AcquisitionApp(QWidget):
         
         self.set_acquisition_state(AcquisitionState.CLEARED)
 
+
     def on_start_acquisition(self):
+        '''starts or restarts the data acquisition'''
         if not self.channels[0].lines:
             # if there's no previous data set the start time to now 
             self.start_time = time.time()
@@ -367,18 +377,19 @@ class AcquisitionApp(QWidget):
         for chn in self.channels:
             chn.new_line()
             
+        # starts the periodic calls to the data acquisition method
         self.acquire_data_timer.start()
         self.set_acquisition_state(AcquisitionState.RUNNING)
         
 
     def on_stop_acquisition(self):
+        '''stops the data acquisition'''
         self.acquire_data_timer.stop()
         self.set_acquisition_state(AcquisitionState.STOPPED)
 
 
     def acquire_data(self):
         '''reads data and updates the lines'''
-        
         # prepare the command based on selected checkboxes
         command = ''
         refs = []
@@ -417,6 +428,7 @@ class AcquisitionApp(QWidget):
 
 
 if __name__ == "__main__":
+    # main loop
     app = QApplication(sys.argv)
     window = AcquisitionApp(app)
     window.show()

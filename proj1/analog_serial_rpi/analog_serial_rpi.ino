@@ -97,18 +97,16 @@ int parse_command() {
     }
   }
 
-
-  if(!size && !argc) return PARSE_EMPTY;
-  else if(size == -1) return PARSE_ERROR;
-  else return PARSE_OK;
+  if(!size && !argc) return PARSE_EMPTY;    // nothing in the serial buffer
+  else if(size == -1) return PARSE_ERROR;   // something went wrong while parsing
+  else return PARSE_OK;                     // parsed ok
 }
 
-// function that returns the voltage at a given analog pin
+// function that returns the voltage at a given analog pin accounting for samples
 float voltage(int pin) {
   // delay(7) https://www.skillbank.co.uk/arduino/readanalogvolts.ino
   unsigned long sum = 0;
-  for(int i = 0; i < settings.samples; i++)
-  {
+  for(int i = 0; i < settings.samples; i++){
     sum += analogRead(pin);
     delay(7);
   }
@@ -256,6 +254,7 @@ void bstop() {
 }
 
 void help(){
+  // stored in flash memory
   Serial.println(F("Available commands:"));
   Serial.println(F("\t- help(): provides information on all the commands."));
   Serial.println(F("\t- add(a, ...): adds from 1 to 3 numbers."));
@@ -268,9 +267,6 @@ void help(){
   Serial.println(F("\t- analog(...): prints the input channel voltages, the argument can be a single number\n\t\t"
                   "from 0 to 6 or a bitmask like 0b001011 specifying multiple channels (LSB is A0).\n\t\t"
                   "If no argument is provided and is broadcasting, immediately print the broadcast bitmask channels."));
-  //Serial.println("\t- bset(bitmask, interval): ssaves the channels specified by the bitmask and,\n\t\t"
-  //                "the interval in ms between prints, for broadcasting with 'bstart'.");
-  //Serial.println("\t- bget(): prints the values previously set in 'bset', and if is currently broadcasting.");
   Serial.println(F("\t- bstart(): starts broadcasting with the broadcast parameters in the settings."));
   Serial.println(F("\t- bstop(): stops broadcasting."));
   Serial.println(F("Available settings:"));
@@ -307,7 +303,7 @@ void loop() {
   if(result == PARSE_ERROR) Serial.println("ERROR: invalid command");
   if(result != PARSE_OK) return;
 
-  // process any commands
+  // process any commands using the RUN_ARG macro
   bool found = false;
   RUN_ARG(help)
   RUN_ARG(add)

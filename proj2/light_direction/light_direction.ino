@@ -20,10 +20,14 @@ float ldr(const uint8_t pin) {
 
 
 Servo servoLat;
+Servo servoLon;
 
 void setup() {
   Serial.begin(38400);
   servoLat.attach(10);
+  servoLon.attach(9);
+
+  servoLon.write(90);
 }
 
 void loop() {
@@ -38,7 +42,6 @@ void loop() {
   float light1 = ldr(A1) - 9700;
   float light2 = ldr(A2) - 5700;
   float light3 = ldr(A3) - 8000;
-
   float x = (light0 + light1 - light2 - light3) / 4.7e3;
   float y = (light2 + light1 - light0 - light3) / 4.7e3;
 

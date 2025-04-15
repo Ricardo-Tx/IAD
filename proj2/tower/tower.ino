@@ -68,6 +68,7 @@ int sizeRaw = 16;    // how many chars in current piece
 int argc = 4;     // how many pieces (1 command + up to 3 arguments)
 bool closed = false;
 bool bluetooth = false;   // whether the last command was sent through bluetooth serial
+bool tracking = false;
 
 
 
@@ -185,6 +186,12 @@ void fire(){
 
   int val = strtoul(argv[1], NULL, 10);
   servoFire.write(val);
+}  
+
+void track(){
+  if(argc != 2) BAD_ARG_COUNT("1")
+
+  tracking = strtoul(argv[1], NULL, 10);
 }  
 
 void laser(){
@@ -359,8 +366,10 @@ void loop() {
   // PROBLEM?: x and y point to the right direction (0 to stop, negative and positive to move up or down),
   // but are not exact values of the angle errors.
   // ! homing still not accounted for we need a reed switch !
-  servoLat.write(constrain(servoLat.read() + y*10, 0, 180));  // set angle to    lat_N = lat + y
-  servoLon.write(90 + x*15);                                  // set speed to    lon_N' = lon' + x                                  
+  if(tracking){ 
+    servoLat.write(constrain(servoLat.read() + (y > 0 ? -1 : 1), 0, 180));  // set angle to    lat_N = lat + y
+    servoLon.write(90 + x*15);                                  // set speed to    lon_N' = lon' + x                                  
+  }
 
 
   // COMMAND PROCESSING
@@ -378,6 +387,8 @@ void loop() {
   RUN_ARG(help)
   RUN_ARG(lat)
   RUN_ARG(lon)
+  RUN_ARG(fire)
+  RUN_ARG(track)
   RUN_ARG(laser)
   RUN_ARG(defget)
   RUN_ARG(defput)

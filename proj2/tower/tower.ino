@@ -44,6 +44,9 @@ Servo servoLon;
 Servo servoFire;
 
 // Servo limits
+const int servoLatHigh = 90;
+const int servoLatLow = 30;
+float latAngle = 0;
 const float minBatVoltage = 5.5;
 
 // Calibration stored in EEPROM
@@ -195,6 +198,7 @@ void lat(){
 
   int angle = strtoul(argv[1], NULL, 10);
   servoLat.write(angle);
+  latAngle = (float)angle;
 } 
 
 void lon(){
@@ -372,7 +376,8 @@ void setup() {
   servoLon.attach(LON_PIN);
   servoLon.write(90);
   servoLat.attach(LAT_PIN);
-  servoLat.write(servoLatLow);
+  servoLat.write(45);
+  latAngle = 45;
   servoFire.attach(FIRE_PIN);
   servoFire.write(90);
 
@@ -449,40 +454,33 @@ void loop() {
   // but are not exact values of the angle errors.
   // ! homing still not accounted for we need a reed switch !
   if(tracking){ 
-    // PPRINT(dvert);
-    // PRINT(", ");
-    // PRINTLN(dhor);
-
-    // servoLat.write(constrain(servoLat.read() + (y > 0 ? -1 : 1), 0, 180));  // set angle to    lat_N = lat + y
-    // servoLon.write(90 + x*15);                                  // set speed to    lon_N' = lon' + x     
-    
     // Servo Vertical (Cima)
 
     if(dvert > tol){
-      float sum;
+      //float sum;
+      //int val = servoLat.read();
       if(at > ab){
-        sum = servoLat.read() - 1;
-        if (sum < servoLatLow) sum = servoLatLow;
+        latAngle = min(latAngle+0.01, (float)servoLatHigh);
       } else {
-        sum = servoLat.read() + 1;
-        if (sum > servoLatHigh) sum = servoLatHigh;
+        latAngle = max(latAngle-0.01, (float)servoLatLow);
       }
-      servoLat.write(sum);
-      Serial.println(sum);
+      //Serial.println(sum);
+      servoLat.write(latAngle);
     }
 
     // Servo Horizontal (Baixo)
-
     if(dhor > tol){
       if(ar > al){
-        servoLon.write(100);
-      } else {
         servoLon.write(80);
+      } else {
+        servoLon.write(100);
       }
     } else {
       servoLon.write(90);
     }
   }
+
+  lastTime = time;
 
 
   // COMMAND PROCESSING

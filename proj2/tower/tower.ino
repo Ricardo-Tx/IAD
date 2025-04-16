@@ -43,6 +43,11 @@ Servo servoLat;
 Servo servoLon;
 Servo servoFire;
 
+// Servo limits
+
+const int servoLatHigh = 100;
+const int servoLatLow = 45;
+
 // Calibration stored in EEPROM
 struct Calibration {
   // calibration resistances for each of the 4 LDRs, dark and ambient light
@@ -332,7 +337,7 @@ void setup() {
   servoLon.attach(LON_PIN);
   servoLon.write(90);
   servoLat.attach(LAT_PIN);
-  servoLat.write(0);
+  servoLat.write(servoLatLow);
   servoFire.attach(FIRE_PIN);
   servoFire.write(90);
 
@@ -349,8 +354,9 @@ void setup() {
 
 void loop() {
   // MAIN FEATURES
-  // laser toggle
   unsigned long time = millis();
+
+  // laser toggle
   if(laserPeriod > 0 && time - lastLaserMillis > laserPeriod) {
     digitalWrite(LASER_PIN, 1-digitalRead(LASER_PIN));
     lastLaserMillis = time;
@@ -366,16 +372,66 @@ void loop() {
   float tl = LIGHT(TL);
   float br = LIGHT(BR);
   float bl = LIGHT(BL);
-  x = br + tr - tl - bl;
-  y = tl + tr - br - bl;
+
+  Serial.print(tr);
+  Serial.print(", ");
+  Serial.print(tl);
+  Serial.print(", ");
+  Serial.print(br);
+  Serial.print(", ");
+  Serial.println(bl);
+
+  float at = (tl + tr) /2;
+  float ab = (bl + br) /2;
+  float ar = (br + tr) /2;
+  float al = (tl + bl) /2;
+
+  float dvert = abs(at - ab);
+  float dhor = abs(ar - al);
+
+  // x = (tl + br - tr - bl);  // try using 1/2
+  // y = (tl + tr - br - bl);  // try using 1/2
+
+  float tol = 0.1;
 
   // write it to servos 
   // PROBLEM?: x and y point to the right direction (0 to stop, negative and positive to move up or down),
   // but are not exact values of the angle errors.
   // ! homing still not accounted for we need a reed switch !
   if(tracking){ 
-    servoLat.write(constrain(servoLat.read() + (y > 0 ? -1 : 1), 0, 180));  // set angle to    lat_N = lat + y
-    servoLon.write(90 + x*15);                                  // set speed to    lon_N' = lon' + x                                  
+    // PPRINT(dvert);
+    // PRINT(", ");
+    // PRINTLN(dhor);
+
+    // servoLat.write(constrain(servoLat.read() + (y > 0 ? -1 : 1), 0, 180));  // set angle to    lat_N = lat + y
+    // servoLon.write(90 + x*15);                                  // set speed to    lon_N' = lon' + x     
+    
+    // Servo Vertical (Cima)
+
+    if(dvert > tol){
+      float sum;
+      if(at > ab){
+        sum = servoLat.read() - 1;
+        if (sum < servoLatLow) sum = servoLatLow;
+      } else {
+        sum = servoLat.read() + 1;
+        if (sum > servoLatHigh) sum = servoLatHigh;
+      }
+      servoLat.write(sum);
+      Serial.println(sum);
+    }
+
+    // Servo Horizontal (Baixo)
+
+    if(dhor > tol){
+      if(ar > al){
+        servoLon.write(100);
+      } else {
+        servoLon.write(80);
+      }
+    } else {
+      servoLon.write(90);
+    }
   }
 
 

@@ -44,9 +44,7 @@ Servo servoLon;
 Servo servoFire;
 
 // Servo limits
-
-const int servoLatHigh = 100;
-const int servoLatLow = 45;
+const float minBatVoltage = 5.5;
 
 // Calibration stored in EEPROM
 struct Calibration {
@@ -241,9 +239,7 @@ void ldr(){
   LDR_GET(BR)
 }
 
-void battery() {
-  if(argc > 1) BAD_ARG_COUNT("no")
-
+float batteryVoltage() {
   float reading = 0.0;
   for(int i = 0; i < 10; i++){
     reading += analogRead(BAT_PIN);
@@ -253,9 +249,16 @@ void battery() {
 
   float voltage = (reading+0.5)/1024.0 * 5.0;
   voltage *= (4.7+2.0)/2.0;   // undo the voltage divider
+  return voltage;
+}
+
+void battery() {
+  if(argc > 1) BAD_ARG_COUNT("no")
+
+  float volt = batteryVoltage();
   PPRINT("BATTERY: ");
-  PRINT(voltage);
-  PRINTLN(" V");
+  PRINT(volt);
+  PRINTLN(volt < minBatVoltage ? " V (too low)" : " V");
 }
 
 #define FIELD1(x) x
@@ -329,6 +332,16 @@ void setup() {
   Serial.println("INFO: type `help()` in a serial message to get information on all the commands");
   SerialBT.println("INFO: type `help()` in a serial message to get information on all the commands");
   //PRINTLN.println("INFO: type `help()` in a serial message to get information on all the commands");
+
+  if (batteryVoltage() < minBatVoltage) {
+    Serial.print("WARNING: Vin below ");
+    Serial.print(minBatVoltage);
+    Serial.println(" V. Avoid running the servos on USB power.");
+    SerialBT.print("WARNING: Vin below ");
+    SerialBT.print(minBatVoltage);
+    SerialBT.println(" V. Avoid running the servos on USB power.");
+  }
+
 
   pinMode(BLUETOOTH_CON_PIN, INPUT);
   pinMode(LASER_PIN, OUTPUT);

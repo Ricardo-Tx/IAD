@@ -17,17 +17,17 @@ const unsigned long ULONG_MAX = (unsigned long)(-1);
 // ########## PIN DECLARATION ##########
 #define LASER_PIN 7             // (red) digital 5V signal for the laser
 
-#define BLUETOOTH_RX_PIN 10     // (green wire, soldered)  https://cdn.velleman.eu/downloads/25/wpi302a4v02.pdf
-#define BLUETOOTH_TX_PIN 11     // (yellow wire, soldered) https://cdn.velleman.eu/downloads/25/wpi302a4v02.pdf
-#define BLUETOOTH_CON_PIN 12    // (State pin, soldered)   https://cdn.velleman.eu/downloads/25/wpi302a4v02.pdf
+#define BLUETOOTH_RX_PIN 10     // (green wire)  https://cdn.velleman.eu/downloads/25/wpi302a4v02.pdf
+#define BLUETOOTH_TX_PIN 11     // (yellow wire) https://cdn.velleman.eu/downloads/25/wpi302a4v02.pdf
+#define BLUETOOTH_CON_PIN 12    // (State pin)   https://cdn.velleman.eu/downloads/25/wpi302a4v02.pdf
 
-#define TL_PIN A2               // (green)    analog 5V signal for the Top Left LDR
-#define TR_PIN A1               // (blue)     analog 5V signal for the Top Right LDR
-#define BL_PIN A3               // (yellow)   analog 5V signal for the Bottom Right LDR
-#define BR_PIN A0               // (purple)   analog 5V signal for the Bottom Left LDR
-#define BAT_PIN A5              // (white, soldered)
+#define TR_PIN A2               // (green)    analog 5V signal for the Top Left LDR
+#define TL_PIN A1               // (blue)     analog 5V signal for the Top Right LDR
+#define BR_PIN A3               // (yellow)   analog 5V signal for the Bottom Right LDR
+#define BL_PIN A0               // (purple)   analog 5V signal for the Bottom Left LDR
+#define BAT_PIN A5              // (white)
 
-#define FIRE_PIN 4              // ...
+#define FIRE_PIN 4              // (white)
 #define LON_PIN 5               // (white)    5V PWM signal for the longitude servo
 #define LAT_PIN 6               // (orange)
 

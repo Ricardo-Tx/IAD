@@ -71,7 +71,7 @@ unsigned long lastFiredMillis = 0;
 const unsigned long fireDelay = 500;
 
 unsigned long lastMeasureMillis = 0;
-const unsigned long measureDelay = 100;
+const unsigned long measureDelay = 50;
 
 unsigned long lastTime = 0;   // time difference between loop calls
 
@@ -409,14 +409,14 @@ void loop() {
 
   // find direction of light
   if(time - lastMeasureMillis > measureDelay) {
-    tr = analogRead(TR_PIN);
-    tl = analogRead(TL_PIN);
-    br = analogRead(BR_PIN);
-    bl = analogRead(BL_PIN);
-    // tr = LIGHT(TR);
-    // tl = LIGHT(TL);
-    // br = LIGHT(BR);
-    // bl = LIGHT(BL);
+    // tr = analogRead(TR_PIN);
+    // tl = analogRead(TL_PIN);
+    // br = analogRead(BR_PIN);
+    // bl = analogRead(BL_PIN);
+    tr = LIGHT(TR);
+    tl = LIGHT(TL);
+    br = LIGHT(BR);
+    bl = LIGHT(BL);
 
     at = (tl + tr) /2;
     ab = (bl + br) /2;
@@ -428,15 +428,15 @@ void loop() {
 
     lastMeasureMillis = time;
 
-    Serial.print("TL: ");
+    Serial.print("(TL, TR, BL, BR): (");
     Serial.print(tl);
-    Serial.print(",\tTR: ");
+    Serial.print(", ");
     Serial.print(tr);
-    Serial.print(",\tBL: ");
+    Serial.print(", ");
     Serial.print(bl);
-    Serial.print(",\tBR: ");
+    Serial.print(", ");
     Serial.print(br);
-    Serial.print(",\tDHOR: ");
+    Serial.print(")\t\tDHOR: ");
     Serial.print(dhor);
     Serial.print(",\tDVERT: ");
     Serial.print(dvert);
@@ -446,8 +446,8 @@ void loop() {
     Serial.println(servoLat.read());
   }
 
-  const float tol = 50;
-  //const float tol = 0.1;
+  // const float tol = 50;
+  const float tol = 0.2;
 
   // write it to servos 
   // PROBLEM?: x and y point to the right direction (0 to stop, negative and positive to move up or down),
@@ -460,20 +460,24 @@ void loop() {
       //float sum;
       //int val = servoLat.read();
       if(at > ab){
-        latAngle = min(latAngle+0.01, (float)servoLatHigh);
+        latAngle = max(latAngle-3, (float)servoLatLow);
       } else {
-        latAngle = max(latAngle-0.01, (float)servoLatLow);
+        latAngle = min(latAngle+3, (float)servoLatHigh);
       }
-      //Serial.println(sum);
+      Serial.print(at);
+      Serial.print(",");
+      Serial.print(ab);
+      Serial.print(",");
+      Serial.println(latAngle);
       servoLat.write(latAngle);
     }
 
     // Servo Horizontal (Baixo)
     if(dhor > tol){
       if(ar > al){
-        servoLon.write(80);
+        servoLon.write(98);
       } else {
-        servoLon.write(100);
+        servoLon.write(82);
       }
     } else {
       servoLon.write(90);

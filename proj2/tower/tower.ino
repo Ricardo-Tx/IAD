@@ -62,9 +62,28 @@ Calibration calibration;
 
 // mechanics state variables
 unsigned long lastLaserMillis = 0;
-unsigned long laserPeriod = 0;
-unsigned long lastFired = 0;
-float x, y;
+unsigned long laserDelay = 0;
+
+unsigned long lastFiredMillis = 0;
+const unsigned long fireDelay = 500;
+
+unsigned long lastMeasureMillis = 0;
+const unsigned long measureDelay = 100;
+
+unsigned long lastTime = 0;   // time difference between loop calls
+
+float tr = 0;
+float tl = 0;
+float br = 0;
+float bl = 0;
+float at = 0;
+float ab = 0;
+float ar = 0;
+float al = 0;
+float dvert = 0;
+float dhor = 0;
+
+//float x, y;
 
 // state variables for parsing a command
 int size = 16;    // how many chars in current piece
@@ -190,7 +209,7 @@ void fire(){
 
   int val = strtoul(argv[1], NULL, 10);
   servoFire.write(val);
-  lastFired = millis();
+  lastFiredMillis = millis();
 }  
 
 void track(){
@@ -209,10 +228,10 @@ void laser(){
 
   if(period < 2) {
     digitalWrite(LASER_PIN, period);
-    laserPeriod = 0;
+    laserDelay = 0;
   } else {
     lastLaserMillis = millis();
-    laserPeriod = period >> 1;
+    laserDelay = period >> 1;
   }
 } 
 
@@ -373,42 +392,57 @@ void loop() {
   unsigned long time = millis();
 
   // laser toggle
-  if(laserPeriod > 0 && time - lastLaserMillis > laserPeriod) {
+  if(laserDelay > 0 && time - lastLaserMillis > laserDelay) {
     digitalWrite(LASER_PIN, 1-digitalRead(LASER_PIN));
     lastLaserMillis = time;
   }
 
   // return fire servo to origin
-  if(servoFire.read() != 90 && time - lastFired > 500) {
+  if(servoFire.read() != 90 && time - lastFiredMillis > fireDelay) {
     servoFire.write(90);
   }
 
   // find direction of light
-  float tr = LIGHT(TR);
-  float tl = LIGHT(TL);
-  float br = LIGHT(BR);
-  float bl = LIGHT(BL);
+  if(time - lastMeasureMillis > measureDelay) {
+    tr = analogRead(TR_PIN);
+    tl = analogRead(TL_PIN);
+    br = analogRead(BR_PIN);
+    bl = analogRead(BL_PIN);
+    // tr = LIGHT(TR);
+    // tl = LIGHT(TL);
+    // br = LIGHT(BR);
+    // bl = LIGHT(BL);
 
-  Serial.print(tr);
-  Serial.print(", ");
-  Serial.print(tl);
-  Serial.print(", ");
-  Serial.print(br);
-  Serial.print(", ");
-  Serial.println(bl);
+    at = (tl + tr) /2;
+    ab = (bl + br) /2;
+    ar = (br + tr) /2;
+    al = (tl + bl) /2;
 
-  float at = (tl + tr) /2;
-  float ab = (bl + br) /2;
-  float ar = (br + tr) /2;
-  float al = (tl + bl) /2;
+    dvert = abs(at - ab);
+    dhor = abs(ar - al);
 
-  float dvert = abs(at - ab);
-  float dhor = abs(ar - al);
+    lastMeasureMillis = time;
 
-  // x = (tl + br - tr - bl);  // try using 1/2
-  // y = (tl + tr - br - bl);  // try using 1/2
+    Serial.print("TL: ");
+    Serial.print(tl);
+    Serial.print(",\tTR: ");
+    Serial.print(tr);
+    Serial.print(",\tBL: ");
+    Serial.print(bl);
+    Serial.print(",\tBR: ");
+    Serial.print(br);
+    Serial.print(",\tDHOR: ");
+    Serial.print(dhor);
+    Serial.print(",\tDVERT: ");
+    Serial.print(dvert);
+    Serial.print(",\tLON: ");
+    Serial.print(servoLon.read());
+    Serial.print(",\tLAT: ");
+    Serial.println(servoLat.read());
+  }
 
-  float tol = 0.1;
+  const float tol = 50;
+  //const float tol = 0.1;
 
   // write it to servos 
   // PROBLEM?: x and y point to the right direction (0 to stop, negative and positive to move up or down),

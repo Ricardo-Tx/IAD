@@ -60,6 +60,7 @@ Calibration calibration;
 // mechanics state variables
 unsigned long lastLaserMillis = 0;
 unsigned long laserPeriod = 0;
+unsigned long lastFired = 0;
 float x, y;
 
 // state variables for parsing a command
@@ -186,6 +187,7 @@ void fire(){
 
   int val = strtoul(argv[1], NULL, 10);
   servoFire.write(val);
+  lastFired = millis();
 }  
 
 void track(){
@@ -352,6 +354,11 @@ void loop() {
   if(laserPeriod > 0 && time - lastLaserMillis > laserPeriod) {
     digitalWrite(LASER_PIN, 1-digitalRead(LASER_PIN));
     lastLaserMillis = time;
+  }
+
+  // return fire servo to origin
+  if(servoFire.read() != 90 && time - lastFired > 500) {
+    servoFire.write(90);
   }
 
   // find direction of light

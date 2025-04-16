@@ -197,6 +197,9 @@ void track(){
   if(argc != 2) BAD_ARG_COUNT("1")
 
   tracking = strtoul(argv[1], NULL, 10);
+  if(!tracking) {
+    servoLon.write(90);
+  }
 }  
 
 void laser(){

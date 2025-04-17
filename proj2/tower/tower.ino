@@ -240,7 +240,7 @@ void laser(){
     laserDelay = 0;
   } else {
     lastLaserMillis = millis();
-    laserDelay = period >> 1;
+    laserDelay = period >> 1;   // period of flash T <=> period of toggle T/2 (= T>>1) 
   }
 } 
 
@@ -334,22 +334,29 @@ void defput(){
 
 void help(){
   // stored in flash memory
-  // REWRITE THIS
   PPRINTLN(F("Available commands:"));
   PPRINTLN(F("\t- help(): provides information on all the commands."));
-  PPRINTLN(F("\t- add(a, ...): adds from 1 to 3 numbers."));
-  PPRINTLN(F("\t- mult(a, b): multiplies 2 numbers."));
   PPRINTLN(F("\t- lat(angle): sets the angle of the latitude servo (0 to 180)."));
-  PPRINTLN(F("\t- lon(angle): sets the speed of the longitude servo (45 to 135)."));
-  PPRINTLN(F("\t- defget(...): prints the setting with the provided name (TRUE_VOLTAGE, SAMPLES, INTERVAL or BROADCAST_CHN).\n\t\t"
+  PPRINTLN(F("\t- lon(speed): sets the speed of the longitude servo (45 to 135)."));
+  PPRINTLN(F("\t- fire(angle): sets the angle of the firing servo (0 shoots left, 180 shoots right)."));
+  PPRINTLN(F("\t- track(state): whether to start tracking (1) or to stop (0)."));
+  PPRINTLN(F("\t- laser(a): 0 turns off the laser, 1 turns on permanently, and a > 1 sets the period of blinking, in ms."));
+  PPRINTLN(F("\t- defget(...): prints the calibration setting with the provided name.\n\t\t"
                   "If no name is provided, print all the settings."));
-  PPRINTLN(F("\t- defput(name, val): sets the value of the setting with the provided name\n\t\t"
-                  "(TRUE_VOLTAGE, SAMPLES, INTERVAL or BROADCAST_CHN)."));
+  PPRINTLN(F("\t- defput(name, val): sets the value of the setting with the provided name."));
+  PPRINTLN(F("\t- ldr(...): prints the resistance value for an ldr (TL, TR, BL, BR).\n\t\t"));
+                  "If no name is provided, print all 4."));
+  PPRINTLN(F("\t- battery(): prints the voltage on the Vin pin, and whether it's below the permissible value (5.5 V)"));
+
   PPRINTLN(F("Available settings:"));
-  PPRINTLN(F("\t- TRUE_VOLTAGE: the real voltage measured at the Arduino 5V pin."));
-  PPRINTLN(F("\t- SAMPLES: number of samples to take average of, to reduce noise."));
-  PPRINTLN(F("\t- INTERVAL: time in ms to wait between reading broadcasts."));
-  PPRINTLN(F("\t- CHANNELS: bitmask like 0b001011 specifying multiple analog ports to read when broadcasting"));
+  PRINTLN(F("\t- TL_DARK: resistance of top left LDR in least light"));
+  PRINTLN(F("\t- TL_AMB: resistance of top left LDR in most light"));
+  PRINTLN(F("\t- TR_DARK: resistance of top right LDR in least light"));
+  PRINTLN(F("\t- TR_AMB: resistance of top right LDR in most light"));
+  PRINTLN(F("\t- BL_DARK: resistance of bottom left LDR in least light"));
+  PRINTLN(F("\t- BL_AMB: resistance of bottom left LDR in most light"));
+  PRINTLN(F("\t- BR_DARK: resistance of bottom left LDR in least light"));
+  PRINTLN(F("\t- BR_AMB: resistance of bottom left LDR in most light"));
 }
 
 
@@ -439,6 +446,7 @@ void loop() {
 
     lastMeasureMillis = time;
 
+    // Debugging information (USB only)
     Serial.print("(TL, TR, BL, BR): (");
     Serial.print(tl, 4);
     Serial.print(", ");
@@ -457,7 +465,7 @@ void loop() {
     Serial.println(servoLat.read());
   }
 
-  
+
   if(tracking){ 
     // Vertical Servo
     const float latKp = -7.0;

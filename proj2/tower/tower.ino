@@ -204,12 +204,55 @@ void lat(){
   latAngle = (float)angle;
 } 
 
+const float invLonProfileIntegral = 1/0.75;
+float lonProfileNorm(float t) {
+  if (t < 0.25) return 1.3333 * (16.0*(3.0-8.0*t)*t*t);
+  else if (t > 0.75) return 1.3333 * (-80.0+t*(288.0+t*(128.0*t-336.0)));
+  else return 1.3333;
+}
+
+int angVelToSignal(float w) {
+  // non corrected value obtained with 6.18V servo input. assuming angular velocity increases 
+  // linearly with voltage, so time is inversely proportional. 
+  const float T = 14.7 * (6.18 / batteryVoltage());   // Unit: s*sig
+  const float t_0 = 0.15;                              // Unit: s
+  const float c = 90.5;                               // Unit: sig
+  float s = w*T / (M_PI + w*(w > 0 ? -t_0 : t_0)) + c;
+  int sig = w > 0 ? ceil(s) : floor(s);
+  if(sig < 45 || sig > 135) return 0;
+  return sig;
+}
+
+float signalToAngVel(int s) {
+  // non corrected value obtained with 6.18V servo input. assuming angular velocity increases 
+  // linearly with voltage, so time is inversely proportional. 
+  const float T = 14.7 * (6.18 / batteryVoltage());   // Unit: s*sig
+  const float t_0 = 0.15;                              // Unit: s
+  const float c = 90.5;                               // Unit: sig
+  float w = M_PI / ((s > c ? t_0 : -t_0) + T/(s-c));
+  return w;
+}
+
 void lon(){
   if(argc != 2) BAD_ARG_COUNT("1")
 
-  int vel = strtoul(argv[1], NULL, 10);
-  servoLon.write(vel);
-  lonSpeed = vel;
+  if(argv[1][0] == '+' || argv[1][0] == '-') {
+    // write angle
+    long angleDelta = strtol(argv[1], NULL, 10);
+
+    // average speed can be at most maxSpeed * 0.75 <-> signal = 45*0.75 = 34
+    // a lower value can be chosen, making the servo move slower for longer
+    lonAngleAvgSignal = sgn(angleDelta)*34; 
+
+    float avgSpeed = signalToAngVel(lonAngleAvgSignal); 
+    lonAngleDelay = (unsigned long)(abs(angleDelta) / avgSpeed * 1000);
+    lastLonAngleMillis = millis();
+  } else {
+    // write velocity directly
+    int vel = strtoul(argv[1], NULL, 10);
+    servoLon.write(vel);
+    lonSpeed = vel;
+  }
 } 
 
 void fire(){
@@ -344,7 +387,7 @@ void help(){
   PPRINTLN(F("\t- defget(...): prints the calibration setting with the provided name.\n\t\t"
                   "If no name is provided, print all the settings."));
   PPRINTLN(F("\t- defput(name, val): sets the value of the setting with the provided name."));
-  PPRINTLN(F("\t- ldr(...): prints the resistance value for an ldr (TL, TR, BL, BR).\n\t\t"));
+  PPRINTLN(F("\t- ldr(...): prints the resistance value for an ldr (TL, TR, BL, BR).\n\t\t"
                   "If no name is provided, print all 4."));
   PPRINTLN(F("\t- battery(): prints the voltage on the Vin pin, and whether it's below the permissible value (5.5 V)"));
 
@@ -396,6 +439,33 @@ void setup() {
 
   // update settings right away
   EEPROM.get(0, calibration);
+
+  // float sum = 0.0;
+  // for(int i = 0; i < 100; i++) {
+  //   Serial.print("f(");
+  //   Serial.print(i*0.01);
+  //   Serial.print(") = ");
+  //   float val = lonProfileNorm(i*0.01);
+  //   sum += val * 0.01;
+  //   Serial.println(val);
+  // }
+  // Serial.println(sum);   // should be = 1.0
+
+
+  for(int i = -45; i < 46; i++) {
+    Serial.print("sig(");
+    Serial.print(i/45.0*8);
+    Serial.print(") = ");
+    Serial.print(angVelToSignal(i/45.0*8));
+    Serial.print("\t\tvel(");
+    Serial.print(i+90);
+    Serial.print(") = ");
+    Serial.println(signalToAngVel(i+90));
+
+    // Serial.print(i+90);
+    // Serial.print(" -> ");
+    // Serial.println(angVelToSignal(signalToAngVel(i+90)));
+  }
 }
 
 
@@ -422,6 +492,13 @@ void loop() {
     servoFire.write(90);
   }
 
+  // angle movement for lon servo
+  if(time - lastLonAngleMillis <= lonAngleDelay) {
+    float t = (time - lastLonAngleMillis)/(float)lonAngleDelay;
+    int sig = lonAngleAvgSignal*lonProfile(t);
+    servoLon.write(sig+90);
+  }
+      
   // find direction of light
   if(time - lastMeasureMillis > measureDelay) {
     // tr = analogRead(TR_PIN);

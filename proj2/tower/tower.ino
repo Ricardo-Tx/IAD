@@ -439,33 +439,6 @@ void setup() {
 
   // update settings right away
   EEPROM.get(0, calibration);
-
-  // float sum = 0.0;
-  // for(int i = 0; i < 100; i++) {
-  //   Serial.print("f(");
-  //   Serial.print(i*0.01);
-  //   Serial.print(") = ");
-  //   float val = lonProfileNorm(i*0.01);
-  //   sum += val * 0.01;
-  //   Serial.println(val);
-  // }
-  // Serial.println(sum);   // should be = 1.0
-
-
-  for(int i = -45; i < 46; i++) {
-    Serial.print("sig(");
-    Serial.print(i/45.0*8);
-    Serial.print(") = ");
-    Serial.print(angVelToSignal(i/45.0*8));
-    Serial.print("\t\tvel(");
-    Serial.print(i+90);
-    Serial.print(") = ");
-    Serial.println(signalToAngVel(i+90));
-
-    // Serial.print(i+90);
-    // Serial.print(" -> ");
-    // Serial.println(angVelToSignal(signalToAngVel(i+90)));
-  }
 }
 
 
@@ -501,10 +474,6 @@ void loop() {
       
   // find direction of light
   if(time - lastMeasureMillis > measureDelay) {
-    // tr = analogRead(TR_PIN);
-    // tl = analogRead(TL_PIN);
-    // br = analogRead(BR_PIN);
-    // bl = analogRead(BL_PIN);
     tr = LIGHT(TR);
     tl = LIGHT(TL);
     br = LIGHT(BR);

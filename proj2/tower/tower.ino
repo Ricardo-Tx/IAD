@@ -45,8 +45,9 @@ Servo servoFire;
 
 // Servo limits
 const int servoLatHigh = 90;
-const int servoLatLow = 30;
+const int servoLatLow = 15;
 float latAngle = 0;
+float lonSpeed = 90;
 const float minBatVoltage = 5.5;
 
 // Calibration stored in EEPROM
@@ -84,7 +85,9 @@ float ab = 0;
 float ar = 0;
 float al = 0;
 float dvert = 0;
+float dvertLast = 0;
 float dhor = 0;
+float dhorLast = 0;
 
 //float x, y;
 
@@ -206,6 +209,7 @@ void lon(){
 
   int vel = strtoul(argv[1], NULL, 10);
   servoLon.write(vel);
+  lonSpeed = vel;
 } 
 
 void fire(){
@@ -222,6 +226,7 @@ void track(){
   tracking = strtoul(argv[1], NULL, 10);
   if(!tracking) {
     servoLon.write(90);
+    lonSpeed = 90;
   }
 }  
 
@@ -375,6 +380,7 @@ void setup() {
   // servos
   servoLon.attach(LON_PIN);
   servoLon.write(90);
+  lonSpeed = 90;
   servoLat.attach(LAT_PIN);
   servoLat.write(45);
   latAngle = 45;
@@ -395,6 +401,8 @@ void setup() {
 void loop() {
   // MAIN FEATURES
   unsigned long time = millis();
+  float dtime = (time-lastTime)/1000.0;
+  lastTime = time;
 
   // laser toggle
   if(laserDelay > 0 && time - lastLaserMillis > laserDelay) {
@@ -423,68 +431,48 @@ void loop() {
     ar = (br + tr) /2;
     al = (tl + bl) /2;
 
-    dvert = abs(at - ab);
-    dhor = abs(ar - al);
+    dvertLast = dvert;
+    dhorLast = dhor;
+    
+    dvert = at - ab;
+    dhor = ar - al;
 
     lastMeasureMillis = time;
 
     Serial.print("(TL, TR, BL, BR): (");
-    Serial.print(tl);
+    Serial.print(tl, 4);
     Serial.print(", ");
-    Serial.print(tr);
+    Serial.print(tr, 4);
     Serial.print(", ");
-    Serial.print(bl);
+    Serial.print(bl, 4);
     Serial.print(", ");
-    Serial.print(br);
+    Serial.print(br, 4);
     Serial.print(")\t\tDHOR: ");
-    Serial.print(dhor);
+    Serial.print(dhor, 4);
     Serial.print(",\tDVERT: ");
-    Serial.print(dvert);
+    Serial.print(dvert, 4);
     Serial.print(",\tLON: ");
     Serial.print(servoLon.read());
     Serial.print(",\tLAT: ");
     Serial.println(servoLat.read());
   }
 
-  // const float tol = 50;
-  const float tol = 0.2;
-
-  // write it to servos 
-  // PROBLEM?: x and y point to the right direction (0 to stop, negative and positive to move up or down),
-  // but are not exact values of the angle errors.
-  // ! homing still not accounted for we need a reed switch !
+  
   if(tracking){ 
-    // Servo Vertical (Cima)
+    // Vertical Servo
+    const float latKp = -7.0;
+    const float latKd = 1.1;
+    latAngle += dvert*latKp + (dvert-dvertLast)/dtime*latKd;
+    latAngle = constrain(latAngle, servoLatLow, servoLatHigh);
+    servoLat.write(latAngle);
 
-    if(dvert > tol){
-      //float sum;
-      //int val = servoLat.read();
-      if(at > ab){
-        latAngle = max(latAngle-3, (float)servoLatLow);
-      } else {
-        latAngle = min(latAngle+3, (float)servoLatHigh);
-      }
-      Serial.print(at);
-      Serial.print(",");
-      Serial.print(ab);
-      Serial.print(",");
-      Serial.println(latAngle);
-      servoLat.write(latAngle);
-    }
-
-    // Servo Horizontal (Baixo)
-    if(dhor > tol){
-      if(ar > al){
-        servoLon.write(98);
-      } else {
-        servoLon.write(82);
-      }
-    } else {
-      servoLon.write(90);
-    }
+    // Horizontal Servo
+    const float lonKp = 8.0 * sqrt(cos(latAngle / 180.0 * 3.14));   // decent profile to avoid sudden lon movements for lat close to 90º 
+    const float lonKd = 0.9;
+    lonSpeed = 90 + dhor*lonKp + (dhor-dhorLast)/dtime*lonKd;   // lon only moves < 87 or > 93 so we accept some steady state error for less jitter
+    lonSpeed = constrain(lonSpeed, 80, 100);
+    servoLon.write(lonSpeed);
   }
-
-  lastTime = time;
 
 
   // COMMAND PROCESSING
